@@ -180,7 +180,6 @@ sys.stdout = sys.__stdout__
 result if result is not None else stdout_output
             `;
 
-        console.log('pythonWrapperCode', pythonWrapperCode)
         try {
             let output = await pyodide.runPythonAsync(pythonWrapperCode);
             output = output || await pyodide.runPythonAsync(code)
