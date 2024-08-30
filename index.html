@@ -26,6 +26,9 @@
         <pre id="editor" style="max-width: 50%">
             import numpy as np
 np.arange(15).reshape(3, 5)
+        a=input("nhap ten: ")
+        print(a)
+            sum([1,2,3,4,6])
         </pre>
     </div>
     <div class="col-5">
@@ -43,7 +46,7 @@ np.arange(15).reshape(3, 5)
 <script src="https://rawgithub.com/ajaxorg/ace-builds/master/src/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
 <script src="https://code.jquery.com/jquery-2.0.3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.21.0/full/pyodide.js"></script>
 <script>
     // trigger extension
     ace.require("ace/ext/language_tools");
@@ -89,8 +92,8 @@ np.arange(15).reshape(3, 5)
         let pythonWrapperCode = ``;
 
         if (code.includes('import')) {
-            let regex = /^(import|from)\s+([^\s]+)/
-            const match = regex.exec(code);
+            let importRegex = /^(import|from)\s+([^\s]+)/
+            const match = importRegex.exec(code);
 
             if (match) {
                 let moduleName = match[2]
