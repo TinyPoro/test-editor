@@ -24,11 +24,17 @@
 <div class="row">
     <div class="col-6">
         <pre id="editor" style="max-width: 50%">
-            import numpy as np
-np.arange(15).reshape(3, 5)
-        a=input("nhap ten: ")
-        print(a)
-            sum([1,2,3,4,6])
+with open("example.txt", "w") as file:
+    # Write some content to the file
+    file.write("Hello, this is a test file.\n")
+    file.write("This is the second line.\n")
+
+# Open the same file in read mode
+with open("example.txt", "r") as file:
+    # Read the content of the file
+    content = file.read()
+    print("File content:")
+    print(content)
         </pre>
     </div>
     <div class="col-5">
@@ -74,39 +80,43 @@ np.arange(15).reshape(3, 5)
         return pyodide;
     }
     let pyodideReadyPromise = main();
+    let delimiters = ["\n",";"]; // Array of delimiters
+    let splitRegex = new RegExp(delimiters.join('|'), 'g');
 
     async function evaluatePython() {
-        let delimiters = ["\n",";"]; // Array of delimiters
-        let splitRegex = new RegExp(delimiters.join('|'), 'g');
-        let codes = editor.getValue().split(splitRegex)
+        const editorValue = editor.getValue();
+        await loadPackages(editorValue)
+
+        await runPythonCode(editorValue)
+    }
+
+    async function loadPackages(value) {
+        let pyodide = await pyodideReadyPromise;
+
+        let codes = value.split(splitRegex)
             .map(line => line.trim())
             .filter(element => element !== undefined && element !== null && element !== "")
 
         for (let code of codes) {
-            await evaluateSingleCode(code)
+            if (code.includes('import')) {
+                let importRegex = /^(import|from)\s+([^\s]+)/
+                const match = importRegex.exec(code);
+
+                if (match) {
+                    let moduleName = match[2]
+
+                    await pyodide.loadPackage(moduleName);
+                }
+            }
         }
     }
 
-    async function evaluateSingleCode(code) {
+    async function runPythonCode(value) {
         let pyodide = await pyodideReadyPromise;
-        let pythonWrapperCode = ``;
 
-        if (code.includes('import')) {
-            let importRegex = /^(import|from)\s+([^\s]+)/
-            const match = importRegex.exec(code);
+        let code = value.trim()
 
-            if (match) {
-                let moduleName = match[2]
-
-                await pyodide.loadPackage(moduleName);
-
-                await pyodide.runPythonAsync(code);
-                addToOutput(code, `Imported module ${moduleName}`)
-            } else {
-                addToOutput(code, `Imported module failed`)
-            }
-        } else {
-            pythonWrapperCode = `
+        let pythonWrapperCode = `
 import sys
 from io import StringIO
 
@@ -124,6 +134,7 @@ except SyntaxError:
     # If it's a syntax error, it's likely a statement, so we use exec instead
     exec(${JSON.stringify(code)})
 except Exception as e:
+    print('three')
     # Capture other exceptions and print them
     print(e)
 
@@ -137,12 +148,12 @@ sys.stdout = sys.__stdout__
 result if result is not None else stdout_output
             `;
 
-            try {
-                let output = await pyodide.runPythonAsync(pythonWrapperCode);
-                addToOutput(code, output.toString().trim())
-            } catch (err) {
-                addToOutput(code, err)
-            }
+        console.log('pythonWrapperCode', pythonWrapperCode)
+        try {
+            let output = await pyodide.runPythonAsync(pythonWrapperCode);
+            addToOutput(code, output.toString().trim())
+        } catch (err) {
+            addToOutput(code, err)
         }
     }
 </script>
