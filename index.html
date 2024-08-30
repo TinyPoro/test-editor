@@ -69,7 +69,7 @@ with open("example.txt", "r") as file:
     const output = document.getElementById("output");
 
     function addToOutput(input, s) {
-        output.value += ">>>" + input + "\n" + s + "\n";
+        output.value += ">>>" + input + "\n" + "=" + s + "\n";
     }
 
     output.value = "Initializing...\n";
@@ -134,7 +134,6 @@ except SyntaxError:
     # If it's a syntax error, it's likely a statement, so we use exec instead
     exec(${JSON.stringify(code)})
 except Exception as e:
-    print('three')
     # Capture other exceptions and print them
     print(e)
 
@@ -151,6 +150,7 @@ result if result is not None else stdout_output
         console.log('pythonWrapperCode', pythonWrapperCode)
         try {
             let output = await pyodide.runPythonAsync(pythonWrapperCode);
+            output = output || await pyodide.runPythonAsync(code)
             addToOutput(code, output.toString().trim())
         } catch (err) {
             addToOutput(code, err)
