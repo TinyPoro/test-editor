@@ -24,17 +24,42 @@
 <div class="row">
     <div class="col-6">
         <pre id="editor" style="max-width: 50%">
-with open("example.txt", "w") as file:
-    # Write some content to the file
-    file.write("Hello, this is a test file.\n")
-    file.write("This is the second line.\n")
+import sqlite3
 
-# Open the same file in read mode
-with open("example.txt", "r") as file:
-    # Read the content of the file
-    content = file.read()
-    print("File content:")
-    print(content)
+# Connect to an in-memory SQLite database
+conn = sqlite3.connect(":memory:")
+cursor = conn.cursor()
+
+# Create a new SQLite table
+cursor.execute('''
+    CREATE TABLE users (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        age INTEGER NOT NULL
+    )
+''')
+
+# Insert sample data into the table
+cursor.execute("INSERT INTO users (name, age) VALUES ('Alice', 30)")
+cursor.execute("INSERT INTO users (name, age) VALUES ('Bob', 25)")
+cursor.execute("INSERT INTO users (name, age) VALUES ('Charlie', 35)")
+
+# Commit the changes
+conn.commit()
+
+# Query the table
+cursor.execute("SELECT * FROM users")
+rows = cursor.fetchall()
+
+# Format the output
+output = ''
+for row in rows:
+    output += f'ID: {row[0]}, Name: {row[1]}, Age: {row[2]}\n'
+
+# Close the connection
+conn.close()
+
+output
         </pre>
     </div>
     <div class="col-5">
@@ -90,6 +115,8 @@ with open("example.txt", "r") as file:
         await runPythonCode(editorValue)
     }
 
+    let defaultModules = ['sqlite3']
+
     async function loadPackages(value) {
         let pyodide = await pyodideReadyPromise;
 
@@ -105,7 +132,13 @@ with open("example.txt", "r") as file:
                 if (match) {
                     let moduleName = match[2]
 
-                    await pyodide.loadPackage(moduleName);
+                    if (!defaultModules.includes(moduleName)) {
+                        try {
+                            await pyodide.loadPackage(moduleName);
+                        } catch (e) {
+                            console.log(`error loading package`, moduleName)
+                        }
+                    }
                 }
             }
         }
