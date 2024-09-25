@@ -24,42 +24,17 @@
 <div class="row">
     <div class="col-6">
         <pre id="editor" style="max-width: 50%">
-import sqlite3
+import numpy as np
+import matplotlib.pyplot as plt
 
-# Connect to an in-memory SQLite database
-conn = sqlite3.connect(":memory:")
-cursor = conn.cursor()
+time = np.linspace(0, 10, 100)  # Thời gian từ 0 đến 10 giây
+velocity = 5 * time  # Chuyển động thẳng biến đổi đều với gia tốc 5 m/s²
 
-# Create a new SQLite table
-cursor.execute('''
-    CREATE TABLE users (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        age INTEGER NOT NULL
-    )
-''')
-
-# Insert sample data into the table
-cursor.execute("INSERT INTO users (name, age) VALUES ('Alice', 30)")
-cursor.execute("INSERT INTO users (name, age) VALUES ('Bob', 25)")
-cursor.execute("INSERT INTO users (name, age) VALUES ('Charlie', 35)")
-
-# Commit the changes
-conn.commit()
-
-# Query the table
-cursor.execute("SELECT * FROM users")
-rows = cursor.fetchall()
-
-# Format the output
-output = ''
-for row in rows:
-    output += f'ID: {row[0]}, Name: {row[1]}, Age: {row[2]}\n'
-
-# Close the connection
-conn.close()
-
-output
+plt.plot(time, velocity)
+plt.xlabel('Time (s)')
+plt.ylabel('Velocity (m/s)')
+plt.title('Motion under constant acceleration')
+plt.show()
         </pre>
     </div>
     <div class="col-5">
@@ -126,7 +101,7 @@ output
 
         for (let code of codes) {
             if (code.includes('import')) {
-                let importRegex = /^(import|from)\s+([^\s]+)/
+                let importRegex = /^(import|from)\s+([^\s\.]+)/
                 const match = importRegex.exec(code);
 
                 if (match) {
