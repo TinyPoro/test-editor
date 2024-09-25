@@ -102,6 +102,34 @@ plt.show()
 
         let runningProcess = null;
 
+        let delimiters = ["\n",";"];
+        let splitRegex = new RegExp(delimiters.join('|'), 'g');
+        let defaultModules = ['sqlite3']
+        async function loadPackages(value) {
+            let codes = value.split(splitRegex)
+                .map(line => line.trim())
+                .filter(element => element !== undefined && element !== null && element !== "")
+
+            for (let code of codes) {
+                if (code.includes('import')) {
+                    let importRegex = /^(import|from)\s+([^\s\.]+)/
+                    const match = importRegex.exec(code);
+
+                    if (match) {
+                        let moduleName = match[2]
+
+                        if (!defaultModules.includes(moduleName)) {
+                            try {
+                                await pyodide.loadPackage(moduleName);
+                            } catch (e) {
+                                console.log(`error loading package`, moduleName)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         document.getElementById('run-button').addEventListener('click', async () => {
             const code = editor.getValue();
 
@@ -109,6 +137,7 @@ plt.show()
 
             try {
                 // let output = pyodide.runPython(document.getElementById(code));
+                await loadPackages(code)
                 const output = await pyodide.runPythonAsync(code);
                 console.log('output', output)
                 //const output = await pyodide.runPythonAsync(code);
