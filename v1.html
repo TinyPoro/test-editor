@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ACE Autocompletion demo</title>
+    <style type="text/css" media="screen">
+        body {
+            overflow: hidden;
+        }
+
+        #editor {
+            margin: 0;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+</head>
+<body>
+
+<div class="row">
+    <div class="col-6">
+        <pre id="editor" style="max-width: 50%">
+import numpy as np
+import matplotlib.pyplot as plt
+
+time = np.linspace(0, 10, 100)  # Thời gian từ 0 đến 10 giây
+velocity = 5 * time  # Chuyển động thẳng biến đổi đều với gia tốc 5 m/s²
+
+plt.plot(time, velocity)
+plt.xlabel('Time (s)')
+plt.ylabel('Velocity (m/s)')
+plt.title('Motion under constant acceleration')
+plt.show()
+        </pre>
+    </div>
+    <div class="col-5">
+        <button onclick="evaluatePython()">Run</button>
+        <br />
+        <br />
+        <div>Output:</div>
+        <textarea id="output" style="width: 100%;" rows="6" disabled></textarea>
+    </div>
+</div>
+
+
+<!-- load ace -->
+<script src="https://rawgithub.com/ajaxorg/ace-builds/master/src/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="https://rawgithub.com/ajaxorg/ace-builds/master/src/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
+<script src="https://code.jquery.com/jquery-2.0.3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.21.0/full/pyodide.js"></script>
+<script>
+    // trigger extension
+    ace.require("ace/ext/language_tools");
+    var editor = ace.edit("editor");
+    editor.session.setMode("ace/mode/python");
+    editor.setTheme("ace/theme/monokai");
+    // enable autocompletion and snippets
+    editor.setOptions({
+        enableBasicAutocompletion: true,
+        enableSnippets: true,
+        enableLiveAutocompletion: true
+    });
+
+    const output = document.getElementById("output");
+
+    function addToOutput(input, s) {
+        output.value += ">>>" + input + "\n" + "=" + s + "\n";
+    }
+
+    output.value = "Initializing...\n";
+    // init Pyodide
+    async function main() {
+        let pyodide = await loadPyodide();
+        output.value += "Ready!\n";
+        return pyodide;
+    }
+    let pyodideReadyPromise = main();
+    let delimiters = ["\n",";"]; // Array of delimiters
+    let splitRegex = new RegExp(delimiters.join('|'), 'g');
+
+    async function evaluatePython() {
+        const editorValue = editor.getValue();
+        await loadPackages(editorValue)
+
+        await runPythonCode(editorValue)
+    }
+
+    let defaultModules = ['sqlite3']
+
+    async function loadPackages(value) {
+        let pyodide = await pyodideReadyPromise;
+
+        let codes = value.split(splitRegex)
+            .map(line => line.trim())
+            .filter(element => element !== undefined && element !== null && element !== "")
+
+        for (let code of codes) {
+            if (code.includes('import')) {
+                let importRegex = /^(import|from)\s+([^\s\.]+)/
+                const match = importRegex.exec(code);
+
+                if (match) {
+                    let moduleName = match[2]
+
+                    if (!defaultModules.includes(moduleName)) {
+                        try {
+                            await pyodide.loadPackage(moduleName);
+                        } catch (e) {
+                            console.log(`error loading package`, moduleName)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    async function runPythonCode(value) {
+        let pyodide = await pyodideReadyPromise;
+
+        let code = value.trim()
+
+        let pythonWrapperCode = `
+import sys
+from io import StringIO
+
+# Redirect stdout to capture print outputs
+output_buffer = StringIO()
+sys.stdout = output_buffer
+
+# Initialize a variable to capture return value
+result = None
+
+try:
+    # Try to execute the input code and capture the result
+    result = eval(${JSON.stringify(code)})
+except SyntaxError:
+    # If it's a syntax error, it's likely a statement, so we use exec instead
+    exec(${JSON.stringify(code)})
+except Exception as e:
+    # Capture other exceptions and print them
+    print(e)
+
+# Get captured output
+stdout_output = output_buffer.getvalue()
+
+# Reset stdout to original state
+sys.stdout = sys.__stdout__
+
+# Format the final output to return
+result if result is not None else stdout_output
+            `;
+
+        try {
+            let output = await pyodide.runPythonAsync(pythonWrapperCode);
+            output = output || await pyodide.runPythonAsync(code)
+            addToOutput(code, output.toString().trim())
+        } catch (err) {
+            addToOutput(code, err)
+        }
+    }
+</script>
+
+</body>
+</html>

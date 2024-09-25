@@ -1,30 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>ACE Autocompletion demo</title>
-    <style type="text/css" media="screen">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+
+    <style>
         body {
-            overflow: hidden;
+            font-family: sans-serif;
+            margin: 20px;
         }
 
-        #editor {
-            margin: 0;
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
+        .editor-container {
+            margin-bottom: 20px;
+        }
+
+        #run-button,#clear-button,
+        #terminate-button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #output-box-container {
+            height: 100px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: rgb(245, 245, 245);
+        }
+
+        .console-output {
+            overflow-y: scroll;
+            height: 200px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #222;
+            color: #00FF00;
+            font-family: 'Lucida Console', 'Courier New', monospace;
         }
     </style>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 </head>
-<body>
 
-<div class="row">
-    <div class="col-6">
-        <pre id="editor" style="max-width: 50%">
-import numpy as np
+<body>
+<h1>Python Online Interpreter</h1>
+<div class="editor-container">
+    <textarea id="code-editor">import numpy as np
 import matplotlib.pyplot as plt
 
 time = np.linspace(0, 10, 100)  # Thời gian từ 0 đến 10 giây
@@ -35,135 +67,76 @@ plt.xlabel('Time (s)')
 plt.ylabel('Velocity (m/s)')
 plt.title('Motion under constant acceleration')
 plt.show()
-        </pre>
-    </div>
-    <div class="col-5">
-        <button onclick="evaluatePython()">Run</button>
-        <br />
-        <br />
-        <div>Output:</div>
-        <textarea id="output" style="width: 100%;" rows="6" disabled></textarea>
-    </div>
+    </textarea>
 </div>
 
-
-<!-- load ace -->
-<script src="https://rawgithub.com/ajaxorg/ace-builds/master/src/ace.js" type="text/javascript" charset="utf-8"></script>
-<script src="https://rawgithub.com/ajaxorg/ace-builds/master/src/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
-<script src="https://code.jquery.com/jquery-2.0.3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/pyodide/v0.21.0/full/pyodide.js"></script>
+<button id="run-button">Run</button>
+<button id="terminate-button">Terminate</button>
+<button id="clear-button">Clear Console</button>
+<div class="console-output" id="consoleOutput"></div>
+<div id="output-box-container"></div>
 <script>
-    // trigger extension
-    ace.require("ace/ext/language_tools");
-    var editor = ace.edit("editor");
-    editor.session.setMode("ace/mode/python");
-    editor.setTheme("ace/theme/monokai");
-    // enable autocompletion and snippets
-    editor.setOptions({
-        enableBasicAutocompletion: true,
-        enableSnippets: true,
-        enableLiveAutocompletion: true
-    });
-
-    const output = document.getElementById("output");
-
-    function addToOutput(input, s) {
-        output.value += ">>>" + input + "\n" + "=" + s + "\n";
-    }
-
-    output.value = "Initializing...\n";
-    // init Pyodide
-    async function main() {
-        let pyodide = await loadPyodide();
-        output.value += "Ready!\n";
-        return pyodide;
-    }
-    let pyodideReadyPromise = main();
-    let delimiters = ["\n",";"]; // Array of delimiters
-    let splitRegex = new RegExp(delimiters.join('|'), 'g');
-
-    async function evaluatePython() {
-        const editorValue = editor.getValue();
-        await loadPackages(editorValue)
-
-        await runPythonCode(editorValue)
-    }
-
-    let defaultModules = ['sqlite3']
-
-    async function loadPackages(value) {
-        let pyodide = await pyodideReadyPromise;
-
-        let codes = value.split(splitRegex)
-            .map(line => line.trim())
-            .filter(element => element !== undefined && element !== null && element !== "")
-
-        for (let code of codes) {
-            if (code.includes('import')) {
-                let importRegex = /^(import|from)\s+([^\s\.]+)/
-                const match = importRegex.exec(code);
-
-                if (match) {
-                    let moduleName = match[2]
-
-                    if (!defaultModules.includes(moduleName)) {
-                        try {
-                            await pyodide.loadPackage(moduleName);
-                        } catch (e) {
-                            console.log(`error loading package`, moduleName)
-                        }
-                    }
-                }
+    (function() {
+        var oldConsoleLog = console.log;
+        console.log = function(message) {
+            var consoleOutput = document.getElementById('consoleOutput');
+            if (consoleOutput) {
+                consoleOutput.innerHTML += message + '<br>';
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
             }
-        }
-    }
-
-    async function runPythonCode(value) {
-        let pyodide = await pyodideReadyPromise;
-
-        let code = value.trim()
-
-        let pythonWrapperCode = `
-import sys
-from io import StringIO
-
-# Redirect stdout to capture print outputs
-output_buffer = StringIO()
-sys.stdout = output_buffer
-
-# Initialize a variable to capture return value
-result = None
-
-try:
-    # Try to execute the input code and capture the result
-    result = eval(${JSON.stringify(code)})
-except SyntaxError:
-    # If it's a syntax error, it's likely a statement, so we use exec instead
-    exec(${JSON.stringify(code)})
-except Exception as e:
-    # Capture other exceptions and print them
-    print(e)
-
-# Get captured output
-stdout_output = output_buffer.getvalue()
-
-# Reset stdout to original state
-sys.stdout = sys.__stdout__
-
-# Format the final output to return
-result if result is not None else stdout_output
-            `;
-
-        try {
-            let output = await pyodide.runPythonAsync(pythonWrapperCode);
-            output = output || await pyodide.runPythonAsync(code)
-            addToOutput(code, output.toString().trim())
-        } catch (err) {
-            addToOutput(code, err)
-        }
-    }
+            oldConsoleLog.apply(console, arguments);
+        };
+    })();
 </script>
 
+<script type="text/javascript">
+    async function main() {
+        let pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/" });
+        console.log("Ready to run your program...");
+        await pyodide.loadPackage(['numpy', 'matplotlib']);
+
+        var editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+            lineNumbers: true,
+            mode: "python"
+        });
+
+        let runningProcess = null;
+
+        document.getElementById('run-button').addEventListener('click', async () => {
+            const code = editor.getValue();
+
+            document.getElementById('output-box-container').innerHTML = '';
+
+            try {
+                // let output = pyodide.runPython(document.getElementById(code));
+                const output = await pyodide.runPythonAsync(code);
+                console.log('output', output)
+                //const output = await pyodide.runPythonAsync(code);
+                displayOutput(output);
+            } catch (error) {
+                displayOutput('Error: ' + error.toString());
+            }
+        });
+
+        document.getElementById('terminate-button').addEventListener('click', () => {
+            if (runningProcess !== null) {
+                runningProcess.destroy();
+                runningProcess = null;
+            }
+        });
+
+
+        document.getElementById('clear-button').addEventListener('click', () => {
+            document.getElementById('consoleOutput').innerHTML = '';
+        });
+
+        function displayOutput(output) {
+            const outputBox = document.getElementById('output-box-container');
+            outputBox.textContent = output;
+        }
+    }
+    main();
+</script>
 </body>
+
 </html>
