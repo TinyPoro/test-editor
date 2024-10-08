@@ -94,6 +94,7 @@ plt.show()
         let pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/" });
         console.log("Ready to run your program...");
         await pyodide.loadPackage(['numpy', 'matplotlib']);
+        await pyodide.setStdin({ stdin: () => prompt() })
 
         var editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
             lineNumbers: true,
