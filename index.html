@@ -69,6 +69,9 @@ plt.title('Motion under constant acceleration')
 plt.show()
     </textarea>
 </div>
+<div id="target" style="max-width: 20%" >
+
+</div>
 
 <button id="run-button">Run</button>
 <button id="terminate-button">Terminate</button>
@@ -90,6 +93,7 @@ plt.show()
 </script>
 
 <script type="text/javascript">
+    document.pyodideMplTarget = document.getElementById('target')
     async function main() {
         let pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/" });
         console.log("Ready to run your program...");
@@ -133,6 +137,16 @@ plt.show()
 
         document.getElementById('run-button').addEventListener('click', async () => {
             const code = editor.getValue();
+
+            const matplotCode = `
+import matplotlib.pyplot as plt
+
+# resize figure size. 1 = 100px
+fig = plt.figure(figsize=(4, 2))
+
+fig.canvas.set_window_title('')
+            `;
+            await pyodide.runPythonAsync(matplotCode);
 
             document.getElementById('output-box-container').innerHTML = '';
 
