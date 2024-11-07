@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>C Code Runner Example</title>
+</head>
+<body>
+<h2>C Code Runner in Browser</h2>
+<textarea id="editor" rows="10" cols="50">
+#include <stdio.h>
+#include <stdlib.h>
+
+// Define a struct for the linked list node
+struct Node {
+    int value;
+    struct Node* next;
+};
+
+// Define a struct for the linked list
+struct LinkedList {
+    struct Node* head;
+};
+
+// Function to insert a node at the front of the linked list
+void insert_front(struct LinkedList* list, int value) {
+    printf("Inserting %d\n", value);
+
+    // Step 1: Create a new Node
+    struct Node* new_node = (struct Node*)malloc(sizeof(struct Node));
+    if (new_node == NULL) {
+        printf("Memory allocation failed\n");
+        return;
+    }
+    new_node->value = value;
+
+    // Step 2: Set next of new_node to the current head
+    new_node->next = list->head;
+
+    // Step 3: Set new_node as the head
+    list->head = new_node;
+}
+
+// Function to get the value at the head of the linked list
+int get_head_value(struct LinkedList* list) {
+    if (list->head == NULL) {
+        return -1;
+    } else {
+        return list->head->value;
+    }
+}
+
+int main() {
+    // Create an instance of LinkedList
+    struct LinkedList list;
+    list.head = NULL;
+
+    insert_front(&list, 3);
+    printf("The value at the head is: %d\n", get_head_value(&list));
+
+    insert_front(&list, 2);
+    printf("The value at the head is: %d\n", get_head_value(&list));
+
+    return 0;
+}
+
+    </textarea>
+<br>
+<button onclick="runCode()">Run</button>
+<div id="output" style="border: 1px solid black; margin-top: 10px; padding: 10px;"></div>
+
+<script>
+    function runCode() {
+        const code = document.getElementById("editor").value;
+        const outputDiv = document.getElementById("output");
+
+        const data = JSON.stringify({
+            code
+        });
+
+        fetch('https://easytool.website/api/v1/code-runner/c', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: data
+        })
+            .then(response => response.json())
+            .then(result => {
+                console.log(result); // Handle the response
+                outputDiv.innerText = result?.data
+            })
+            .catch(error => {
+                console.error('Error:', error); // Handle any errors
+            });
+
+    }
+</script>
+</body>
+</html>

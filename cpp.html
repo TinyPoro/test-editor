@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>C Code Runner Example</title>
+</head>
+<body>
+<h2>C Code Runner in Browser</h2>
+<textarea id="editor" rows="10" cols="50">
+#include <iostream>
+using namespace std;
+
+class Node {
+    public:
+    int value;
+    Node* next;
+
+    // Constructor to initialize the node with a given value
+    Node(int val): value(val), next(nullptr) {}
+};
+
+class LinkedList {
+    public:
+    Node* head;
+
+    void insertFront(int value) {
+        cout << "Inserting " << value << '\n';
+
+        // Step 1: Create a new Node
+        Node* newNode = new Node(value);
+
+        // Step 2: Set next of newNode to the current head
+        newNode -> next = head;
+
+        // Step 3: Set newNode as the head
+        head = newNode;
+    }
+
+    int getHeadValue() {
+        if (head == NULL) {
+            return -1;
+        } else {
+            return head -> value;
+        }
+    }
+};
+
+int main() {
+    LinkedList* list = new LinkedList();
+    list -> insertFront(3);
+    cout << "The value at the head is: " << list -> getHeadValue() << '\n';
+
+    list -> insertFront(2);
+    cout << "The value at the head is: " << list -> getHeadValue() << '\n';
+
+}
+    </textarea>
+<br>
+<button onclick="runCode()">Run</button>
+<div id="output" style="border: 1px solid black; margin-top: 10px; padding: 10px;"></div>
+
+<script>
+    function runCode() {
+        const code = document.getElementById("editor").value;
+        const outputDiv = document.getElementById("output");
+
+        const data = JSON.stringify({
+            code
+        });
+
+        fetch('https://easytool.website/api/v1/code-runner/cpp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: data
+        })
+            .then(response => response.json())
+            .then(result => {
+                console.log(result); // Handle the response
+                outputDiv.innerText = result?.data
+            })
+            .catch(error => {
+                console.error('Error:', error); // Handle any errors
+            });
+
+    }
+</script>
+</body>
+</html>

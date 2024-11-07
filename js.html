@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JavaScript Code Runner</title>
+</head>
+<body>
+<h2>JavaScript Code Runner</h2>
+<textarea id="editor" rows="10" cols="50">
+// Enter your JavaScript code here
+console.log("Hello, World!");
+    </textarea>
+<br>
+<button onclick="runCode()">Run</button>
+<div id="output" style="border: 1px solid black; margin-top: 10px; padding: 10px;"></div>
+
+<script>
+    function runCode() {
+        const code = document.getElementById("editor").value;
+        const outputDiv = document.getElementById("output");
+        outputDiv.innerHTML = ""; // Clear previous output
+
+        try {
+            // Capture console output
+            const originalConsoleLog = console.log;
+            console.log = function(message) {
+                outputDiv.innerHTML += message + "<br>";
+            };
+
+            // Evaluate the JavaScript code
+            eval(code);
+
+            // Restore original console.log
+            console.log = originalConsoleLog;
+        } catch (error) {
+            outputDiv.innerHTML = "Error: " + error.message;
+        }
+    }
+</script>
+</body>
+</html>
