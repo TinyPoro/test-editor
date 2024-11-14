@@ -109,7 +109,7 @@ plt.show()
 
         let delimiters = ["\n",";"];
         let splitRegex = new RegExp(delimiters.join('|'), 'g');
-        let defaultModules = ['sqlite3']
+        let defaultModules = ['sqlite3', 'sys', 'os']
         async function loadPackages(value) {
             let codes = value.split(splitRegex)
                 .map(line => line.trim())
@@ -127,7 +127,7 @@ plt.show()
                             try {
                                 await pyodide.loadPackage(moduleName);
                             } catch (e) {
-                                console.log(`error loading package`, moduleName)
+                                console.log(`error loading package ${moduleName}`, e)
                             }
                         }
                     }
@@ -157,6 +157,13 @@ fig.canvas.set_window_title('')
                 console.log('output', output)
                 //const output = await pyodide.runPythonAsync(code);
                 displayOutput(output);
+
+                const flushCode = `import sys
+import os
+sys.stdout.flush()
+os.fsync(sys.stdout.fileno())
+                `;
+                await pyodide.runPythonAsync(flushCode);
             } catch (error) {
                 displayOutput('Error: ' + error.toString());
             }
