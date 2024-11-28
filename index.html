@@ -56,17 +56,8 @@
 <body>
 <h1>Python Online Interpreter</h1>
 <div class="editor-container">
-    <textarea id="code-editor">import numpy as np
-import matplotlib.pyplot as plt
-
-time = np.linspace(0, 10, 100)  # Thời gian từ 0 đến 10 giây
-velocity = 5 * time  # Chuyển động thẳng biến đổi đều với gia tốc 5 m/s²
-
-plt.plot(time, velocity)
-plt.xlabel('Time (s)')
-plt.ylabel('Velocity (m/s)')
-plt.title('Motion under constant acceleration')
-plt.show()
+    <textarea id="code-editor">so = input("nhap so: ");
+print(so);
     </textarea>
 </div>
 <div id="target" style="max-width: 20%" >
@@ -98,7 +89,25 @@ plt.show()
         let pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/" });
         console.log("Ready to run your program...");
         await pyodide.loadPackage(['numpy', 'matplotlib']);
-        await pyodide.setStdin({ stdin: () => prompt() })
+        await pyodide.runPythonAsync(`
+import builtins
+
+# Save the original input function
+_original_input = builtins.input
+
+def custom_input(prompt=""):
+    # Store the prompt string in a global variable
+    import js
+    js.prompt_text = prompt  # Set the text dynamically in JavaScript
+    return _original_input()
+
+# Replace the built-in input function
+builtins.input = custom_input
+`);
+        await pyodide.setStdin({ stdin: () => {
+            const promptText = self.prompt_text || "";
+            return prompt(promptText)
+        }})
 
         var editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
             lineNumbers: true,
