@@ -56,13 +56,17 @@
 <body>
 <h1>Python Online Interpreter</h1>
 <div class="editor-container">
-    <textarea id="code-editor">so = input("nhap so: ");
-print(so);
+    <textarea id="code-editor">f = open("demofile2.txt", "a");
+f.write("Now the file has more content!");
+f.close();
     </textarea>
 </div>
 <div id="target" style="max-width: 20%" >
 
 </div>
+
+<button onclick="listFiles()">Liệt kê Tệp</button>
+<button onclick="readFile('demofile2.txt')">Đọc file</button>
 
 <button id="run-button">Run</button>
 <button id="terminate-button">Terminate</button>
@@ -85,8 +89,53 @@ print(so);
 
 <script type="text/javascript">
     document.pyodideMplTarget = document.getElementById('target')
+    let pyodide
+
+    // đây là thư mục gốc mình sẽ thao tác
+    let mountDir = "/data";
+
+    // đây là hàm liệt kê danh sách các file trong thư mục gốc
+    async function listFiles() {
+        try {
+            let files = pyodide.FS.readdir(`${mountDir}`);
+            console.log('files', files);
+        } catch (error) {
+            console.error("Error listFiles:", error);
+        }
+    }
+
+    // đọc nội dung 1 file
+    async function readFile(filePath) {
+        try {
+            const content = pyodide.FS.readFile(`${mountDir}/${filePath}`, { encoding: 'utf8' });
+            console.log("File Content:", content);
+        } catch (error) {
+            console.error("Error readFile:", error);
+        }
+    }
+
+    // khởi tạo mount cái thư mục với IDBFS để mỗi lần reload trang không bị mất
+    async function initFilesystem() {
+        try {
+            pyodide.FS.mkdirTree(mountDir);
+            pyodide.FS.mount(pyodide.FS.filesystems.IDBFS, {}, mountDir);
+
+            // load file từ indexDB IDBFS
+            await new Promise((resolve, reject) => {
+                pyodide.FS.syncfs(true, (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+        } catch (error) {
+            console.error("Error initFilesystem:", error);
+        }
+    }
+
+
     async function main() {
-        let pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/" });
+        pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/" });
+        await initFilesystem();
         console.log("Ready to run your program...");
         await pyodide.loadPackage(['numpy', 'matplotlib']);
         await pyodide.runPythonAsync(`
@@ -105,9 +154,15 @@ def custom_input(prompt=""):
 builtins.input = custom_input
 `);
         await pyodide.setStdin({ stdin: () => {
-            const promptText = self.prompt_text || "";
-            return prompt(promptText)
-        }})
+                const promptText = self.prompt_text || "";
+                return prompt(promptText)
+            }})
+
+
+        await pyodide.runPythonAsync(`
+import os
+os.chdir('${mountDir}')
+  `);
 
         var editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
             lineNumbers: true,
@@ -173,6 +228,14 @@ sys.stdout.flush()
 os.fsync(sys.stdout.fileno())
                 `;
                 await pyodide.runPythonAsync(flushCode);
+
+                // ghi thay đổi từ mem vào indexedDB IDBFS
+                await new Promise((resolve, reject) => {
+                    pyodide.FS.syncfs(false, (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+                });
             } catch (error) {
                 displayOutput('Error: ' + error.toString());
             }
